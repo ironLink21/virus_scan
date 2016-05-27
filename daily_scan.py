@@ -31,30 +31,22 @@ def main():
     if(curr_day == 6):
         subject = 'ALERT VIRUS DETECTED: Full scan - {0}'.format(gethostname())
         print('*********************************************************\n\tStarting Full Scan... [{0} {1}]\n##########################################################\n'.format(date,time))
+        weekly_scan()
+        text = os.popen('tail -n 50 {0}'.format(log_file)).read() if (check_scan(log_file)) else False
 
     # run a home scan
     else:
         subject = 'ALERT VIRUS DETECTED: Home scan - {0}'.format(gethostname())
         print('*********************************************************\n\tStarting Home Scan... [{0} {1}]\n##########################################################\n'.format(date,time))
-        # clamav.scan_file('/home')
+        daily_scan()
+        text = os.popen('tail -n 50 {0}'.format(log_file)).read() if (check_scan(log_file)) else False
 
-
-
-
-
-
-
-    send_message(sender, receiver, text, msg)
-
-
-
-
+    send_message(subject, sender, receiver, text, msg) if (text) else print('\tScan has finished')
 
 def update_clamav(date,time):
     # check and update db
     print('******* Updating DataBase... [{0} {1}] *******\n'.format(date,time))
     os.popen('freshclam --quiet')
-
 
 def daily_scan():
     print();
@@ -62,6 +54,10 @@ def daily_scan():
 
 def weekly_scan():
     print();
+
+def check_scan(log_file):
+    # Check the last set of results. If there are any "Infected" counts that aren't zero, we have a problem.
+    return os.popen('tail -n 50 {0}'.format(log_file)).read() if (os.popen('tail -n 12 {0}  | grep Infected | grep -v 0 | wc -l'.format(log_file)).read() != 0) else False
 
 def send_message(subject, sender, receiver, text, msg):
     msg['From'] = sender
