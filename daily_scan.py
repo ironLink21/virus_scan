@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-import smtplib, sys, os,
-from time                   import strftime
+import smtplib, sys, os, subprocess
+# from time                   import strftime
 from datetime               import datetime
 from email.mime.multipart   import MIMEMultipart
 from email.mime.text        import MIMEText
@@ -15,7 +15,10 @@ def main():
     # create script variables
     log_file = '/var/log/clamav/clamav-{0}.log'.format(date)
     script_log = '/var/log/virus_scan.log'
-    virus_chest = '/var/tmp/virus_chest'
+    # --detect-pua=yes
+    # virus_chest = '/tmp/virus_chest'
+    # user = 'seth'
+    # group = 'seth'
 
     # setting the email variables
     msg = MIMEMultipart('alternative')
@@ -23,37 +26,48 @@ def main():
     receiver = 'celestials2013@gmail.com'
 
     sys.stdout = open(script_log, 'a')
-    print('*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#\n')
+    print('---*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#---\n')
 
-    update_clamav(date,time)
+    update_clamav(date, time)                     # updates clamav database
+    check_log_file(log_file)
+    # check_virus_chest(virus_chest, user, group)  # checks to make sure virus chest dir is created
 
     # if it's Saturday run a full system scan
     if(curr_day == 6):
         subject = 'ALERT VIRUS DETECTED: Full scan - {0}'.format(gethostname())
-        print('*********************************************************\n\tStarting Full Scan... [{0} {1}]\n##########################################################\n'.format(date,time))
-        weekly_scan()
-        text = os.popen('tail -n 50 {0}'.format(log_file)).read() if (check_scan(log_file)) else False
+        print('\t##########################################################\n\t\tStarting Full Scan... [{0} {1}]\n\t##########################################################\n'.format(date, time))
+        run_scan('/', log_file)
+        text = check_scan(log_file)
 
     # run a home scan
     else:
         subject = 'ALERT VIRUS DETECTED: Home scan - {0}'.format(gethostname())
-        print('*********************************************************\n\tStarting Home Scan... [{0} {1}]\n##########################################################\n'.format(date,time))
-        daily_scan()
-        text = os.popen('tail -n 50 {0}'.format(log_file)).read() if (check_scan(log_file)) else False
+        print('\t##########################################################\n\t\tStarting Home Scan... [{0} {1}]\n\t##########################################################\n'.format(date, time))
+        run_scan('/home/seth/Documents', log_file)
+        text = check_scan(log_file)
 
     send_message(subject, sender, receiver, text, msg) if (text) else print('\tScan has finished')
 
 def update_clamav(date,time):
     # check and update db
-    print('******* Updating DataBase... [{0} {1}] *******\n'.format(date,time))
-    os.popen('freshclam --quiet')
+    print('\t\t******* Updating DataBase... [{0} {1}] *******\n'.format(date, time))
+    proc = subprocess.Popen(['freshclam', '--quiet'])
+    proc.wait()
+    print('\t\tfinished update\n')
 
-def daily_scan():
-    print();
+def check_log_file(log_file):
+    if not os.path.exists(log_file):
+        file = open(log_file, 'w+')
+        file.close()
 
-
-def weekly_scan():
-    print();
+def run_scan(myFile, log_file):
+    args = ['clamscan', '-irz', myFile, '--quiet', '--cross-fs', '-l', log_file]
+    proc = subprocess.Popen(args)
+    pid = proc.pid
+    print('\t\tscan pid:', pid)
+    ret_code = proc.wait()
+    time = datetime.now().time().strftime('%H:%M')
+    print('\t\tfinished scan [{0}]'.format(time)) if (ret_code == 0) else print('scan failed!')
 
 def check_scan(log_file):
     # Check the last set of results. If there are any "Infected" counts that aren't zero, we have a problem.
