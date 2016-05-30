@@ -25,7 +25,7 @@ def main():
     sender = 'alert@zelda.com'
     receiver = 'celestials2013@gmail.com'
 
-    sys.stdout = open(script_log, 'a')
+    # sys.stdout = open(script_log, 'a')
     print('---*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#---\n')
 
     update_clamav(date, time)                     # updates clamav database
@@ -43,7 +43,7 @@ def main():
     else:
         subject = 'ALERT VIRUS DETECTED: Home scan - {0}'.format(gethostname())
         print('\t##########################################################\n\t\tStarting Home Scan... [{0} {1}]\n\t##########################################################\n'.format(date, time))
-        run_scan('/home/seth/Documents', log_file)
+        run_scan('/home', log_file)
         text = check_scan(log_file)
 
     send_message(subject, sender, receiver, text, msg) if (text) else print('\tScan has finished')
@@ -61,17 +61,18 @@ def check_log_file(log_file):
         file.close()
 
 def run_scan(myFile, log_file):
-    args = ['clamscan', '-irz', myFile, '--exclude-dir=/sys/', '--quiet', '--cross-fs', '-l', log_file]
+    args = ['clamscan', '-irz', myFile, '--exclude-dir=/sys/', '--quiet', '--detect-pua=yes', '--cross-fs', '-l', log_file]
     proc = subprocess.Popen(args)
     pid = proc.pid
     print('\t\tscan pid:', pid)
     ret_code = proc.wait()
     time = datetime.now().time().strftime('%H:%M')
-    print('\t\tfinished scan [{0}]'.format(time)) if (ret_code == 0) else print('scan failed!')
+    # TODO: need to fix this last check once scan has finished
+    # print('\t\tfinished scan [{0}]'.format(time)) if (ret_code == 0) else print('scan failed!')
 
 def check_scan(log_file):
     # Check the last set of results. If there are any "Infected" counts that aren't zero, we have a problem.
-    return os.popen('tail -n 50 {0}'.format(log_file)).read() if (os.popen('tail -n 12 {0}  | grep Infected | grep -v 0 | wc -l'.format(log_file)).read() != 0) else False
+    return False if (os.popen('tail -n 12 {0}  | grep Infected | grep -v 0 | wc -l'.format(log_file)).read() != 0) else os.popen('tail -n 50 {0}'.format(log_file)).read()
 
 def send_message(subject, sender, receiver, text, msg):
     msg['From'] = sender
