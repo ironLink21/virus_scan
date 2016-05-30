@@ -15,10 +15,7 @@ def main():
     # create script variables
     log_file = '/var/log/clamav/clamav-{0}.log'.format(date)
     script_log = '/var/log/virus_scan.log'
-    # --detect-pua=yes
-    # virus_chest = '/tmp/virus_chest'
-    # user = 'seth'
-    # group = 'seth'
+    virus_chest = '/tmp/virus_chest'
 
     # setting the email variables
     msg = MIMEMultipart('alternative')
@@ -28,22 +25,22 @@ def main():
     # sys.stdout = open(script_log, 'a')
     print('---*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#---\n')
 
-    update_clamav(date, time)                     # updates clamav database
+    update_clamav(date, time)           # updates clamav database
     check_log_file(log_file)
-    # check_virus_chest(virus_chest, user, group)  # checks to make sure virus chest dir is created
+    check_virus_chest(virus_chest)      # checks to make sure virus chest dir is created
 
     # if it's Saturday run a full system scan
     if(curr_day == 6):
         subject = 'ALERT VIRUS DETECTED: Full scan - {0}'.format(gethostname())
         print('\t##########################################################\n\t\tStarting Full Scan... [{0} {1}]\n\t##########################################################\n'.format(date, time))
-        run_scan('/', log_file)
+        run_scan('/', log_file, virus_chest)
         text = check_scan(log_file)
 
     # run a home scan
     else:
         subject = 'ALERT VIRUS DETECTED: Home scan - {0}'.format(gethostname())
         print('\t##########################################################\n\t\tStarting Home Scan... [{0} {1}]\n\t##########################################################\n'.format(date, time))
-        run_scan('/home', log_file)
+        run_scan('/home', log_file, virus_chest)
         text = check_scan(log_file)
 
     send_message(subject, sender, receiver, text, msg) if (text) else print('\tScan has finished')
@@ -60,19 +57,23 @@ def check_log_file(log_file):
         file = open(log_file, 'w+')
         file.close()
 
-def run_scan(myFile, log_file):
-    args = ['clamscan', '-irz', myFile, '--exclude-dir=/sys/', '--quiet', '--detect-pua=yes', '--cross-fs', '-l', log_file]
+def check_virus_chest(virus_chest):
+    if not os.path.exists(virus_chest):
+        os.makedirs(virus_chest)
+        subprocess.call(['chmod','0600',virus_chest])
+
+def run_scan(myFile, log_file, virus_chest):
+    args = ['clamscan', '-irz', myFile, '--exclude-dir=/sys/', '--quiet', '--detect-pua=yes', '--cross-fs', '-l', log_file,'--move={0}'.format(virus_chest)]
     proc = subprocess.Popen(args)
     pid = proc.pid
     print('\t\tscan pid:', pid)
-    ret_code = proc.wait()
-    time = datetime.now().time().strftime('%H:%M')
-    # TODO: need to fix this last check once scan has finished
-    # print('\t\tfinished scan [{0}]'.format(time)) if (ret_code == 0) else print('scan failed!')
+    proc.wait()
 
 def check_scan(log_file):
     # Check the last set of results. If there are any "Infected" counts that aren't zero, we have a problem.
-    return False if (os.popen('tail -n 12 {0}  | grep Infected | grep -v 0 | wc -l'.format(log_file)).read() != 0) else os.popen('tail -n 50 {0}'.format(log_file)).read()
+    if os.popen('tail -n 12 {0}  | grep Infected | grep -v 0 | wc -l'.format(log_file)).read() is not 0:
+        return os.popen('tail -n 50 {0}'.format(log_file)).read()
+    return False
 
 def send_message(subject, sender, receiver, text, msg):
     msg['From'] = sender
