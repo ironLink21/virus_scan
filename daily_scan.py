@@ -61,7 +61,7 @@ def check_log_file(log_file):
         file.close()
 
 def run_scan(myFile, log_file):
-    args = ['clamscan', '-irz', myFile, '--quiet', '--cross-fs', '-l', log_file]
+    args = ['clamscan', '-irz', myFile, '--exclude-dir=/sys/', '--quiet', '--cross-fs', '-l', log_file]
     proc = subprocess.Popen(args)
     pid = proc.pid
     print('\t\tscan pid:', pid)
