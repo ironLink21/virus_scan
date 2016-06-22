@@ -15,7 +15,7 @@ def main():
     # create script variables
     log_file = '/var/log/clamav/clamav-{0}.log'.format(date)
     script_log = '/var/log/virus_scan.log'
-    virus_chest = '/tmp/virus_chest'
+    virus_chest = '/home/seth/virus_chest'
 
     # setting the email variables
     msg = MIMEMultipart('alternative')
@@ -63,7 +63,7 @@ def check_virus_chest(virus_chest):
         subprocess.call(['chmod','0600',virus_chest])
 
 def run_scan(myFile, log_file, virus_chest):
-    args = ['clamscan', '-irz', myFile, '--exclude-dir=/sys/', '--exclude-dir=/home/seth/Games/', '--quiet', '--detect-pua=yes', '--cross-fs', '-l', log_file]
+    args = ['clamscan', '-irz', myFile, '--exclude-dir=/sys/', '--exclude-dir=/home/seth/Games/','--exclude-dir={0}'.format(virus_chest),'--quiet', '--detect-pua=yes', '--cross-fs', '-l', log_file,'--move={0}'.format(virus_chest)]
     proc = subprocess.Popen(args)
     pid = proc.pid
     print('\t\tscan pid:', pid)
