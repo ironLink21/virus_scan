@@ -63,7 +63,7 @@ def check_virus_chest(virus_chest):
         subprocess.call(['chmod','0600',virus_chest])
 
 def run_scan(myFile, log_file, virus_chest):
-    args = ['clamscan', '-irz', myFile, '--exclude-dir=/sys/', '--exclude-dir=/home/seth/Games/', '--quiet', '--detect-pua=yes', '--cross-fs', '-l', log_file,'--move={0}'.format(virus_chest)]
+    args = ['clamscan', '-irz', myFile, '--exclude-dir=/sys/', '--exclude-dir=/home/seth/Games/', '--quiet', '--detect-pua=yes', '--cross-fs', '-l', log_file]
     proc = subprocess.Popen(args)
     pid = proc.pid
     print('\t\tscan pid:', pid)
